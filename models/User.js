@@ -21,8 +21,61 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'admin', 'sales_manager', 'vice_admin', 'senior_manager', 'team_lead', 'project_manager', 'hr_manager', 'finance_manager', 'operations_manager', 'marketing_manager', 'it_manager', 'executive', 'assistant_manager'],
     default: 'user'
+  },
+  // Employee specific fields
+  employeeId: {
+    type: String,
+    sparse: true,
+    unique: true
+  },
+  firstName: {
+    type: String,
+    trim: true
+  },
+  lastName: {
+    type: String,
+    trim: true
+  },
+  designation: {
+    type: String,
+    trim: true
+  },
+  mobile: {
+    type: String,
+    trim: true
+  },
+  department: {
+    type: String,
+    enum: ['sales', 'marketing', 'hr', 'finance', 'it', 'operations', ''],
+    default: ''
+  },
+  reporting: {
+    type: String,
+    enum: ['self', 'manager', 'supervisor', 'director', ''],
+    default: ''
+  },
+  // Address fields
+  addressLine1: {
+    type: String,
+    trim: true
+  },
+  addressLine2: {
+    type: String,
+    trim: true
+  },
+  city: {
+    type: String,
+    trim: true
+  },
+  state: {
+    type: String,
+    trim: true
+  },
+  country: {
+    type: String,
+    trim: true
   },
   createdAt: {
     type: Date,

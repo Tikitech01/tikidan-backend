@@ -66,6 +66,103 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// @route   POST /api/auth/register-employee
+// @desc    Register a new employee
+// @access  Public (should be protected in production)
+router.post('/register-employee', async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      role,
+      employeeId,
+      designation,
+      mobile,
+      department,
+      reporting,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      country
+    } = req.body;
+
+    // Validation - only require essential fields for testing
+    if (!email || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email, password, and role'
+      });
+    }
+
+    // Check if user already exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this email'
+      });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create full name from firstName and lastName if provided
+    const name = firstName && lastName ? `${firstName} ${lastName}` : (firstName || lastName || email.split('@')[0]);
+
+    // Create employee user
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      employeeId,
+      firstName,
+      lastName,
+      designation,
+      mobile,
+      department: department || 'it', // Default department for testing
+      reporting,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      country
+    });
+
+    // Create JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Employee registered successfully',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        employeeId: user.employeeId,
+        department: user.department
+      }
+    });
+  } catch (error) {
+    console.error('Employee registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during employee registration',
+      error: error.message
+    });
+  }
+});
+
 // @route   POST /api/auth/login
 // @desc    Login user
 // @access  Public
@@ -154,6 +251,29 @@ router.get('/me', verifyToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error'
+    });
+  }
+});
+
+// @route   GET /api/auth/employees
+// @desc    Get all employees
+// @access  Private (should be admin only in production)
+router.get('/employees', verifyToken, async (req, res) => {
+  try {
+    // Fetch all users from database, excluding password
+    const employees = await User.find({}).select('-password').sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      count: employees.length,
+      employees: employees
+    });
+  } catch (error) {
+    console.error('Get employees error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching employees',
+      error: error.message
     });
   }
 });
