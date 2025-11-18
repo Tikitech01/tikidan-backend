@@ -3,6 +3,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { verifyToken, requireRole } = require('../middleware/auth');
+const { roles, getRoleDisplayName, getRoleMenuAccess } = require('../config/roles');
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -32,11 +34,12 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
+    // Create user with default role
     const user = await User.create({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      role: 'user' // Default role
     });
 
     // Create JWT token
@@ -97,6 +100,14 @@ router.post('/register-employee', async (req, res) => {
       });
     }
 
+    // Validate role exists
+    if (!roles[role]) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role provided'
+      });
+    }
+
     // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
@@ -124,7 +135,7 @@ router.post('/register-employee', async (req, res) => {
       lastName,
       designation,
       mobile,
-      department: department || 'it', // Default department for testing
+      department: department || '', // No default department
       reporting,
       addressLine1,
       addressLine2,
@@ -196,9 +207,12 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Get user permissions
+    const userPermissions = getRoleMenuAccess(user.role);
+
     // Create JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE }
     );
@@ -211,7 +225,10 @@ router.post('/login', async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        department: user.department,
+        permissions: userPermissions,
+        displayName: getRoleDisplayName(user.role)
       }
     });
   } catch (error) {
@@ -224,7 +241,7 @@ router.post('/login', async (req, res) => {
 });
 
 // @route   GET /api/auth/me
-// @desc    Get current user
+// @desc    Get current user with permissions
 // @access  Private
 router.get('/me', verifyToken, async (req, res) => {
   try {
@@ -237,13 +254,18 @@ router.get('/me', verifyToken, async (req, res) => {
       });
     }
 
+    const userPermissions = getRoleMenuAccess(user.role);
+
     res.json({
       success: true,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        department: user.department,
+        permissions: userPermissions,
+        displayName: getRoleDisplayName(user.role)
       }
     });
   } catch (error) {
@@ -256,9 +278,9 @@ router.get('/me', verifyToken, async (req, res) => {
 });
 
 // @route   GET /api/auth/employees
-// @desc    Get all employees
-// @access  Private (should be admin only in production)
-router.get('/employees', verifyToken, async (req, res) => {
+// @desc    Get all employees (Admin access)
+// @access  Private - Admin only
+router.get('/employees', verifyToken, requireRole(['admin']), async (req, res) => {
   try {
     // Fetch all users from database, excluding password
     const employees = await User.find({}).select('-password').sort({ createdAt: -1 });
@@ -278,27 +300,74 @@ router.get('/employees', verifyToken, async (req, res) => {
   }
 });
 
-// Middleware to verify JWT token
-function verifyToken(req, res, next) {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'No token, authorization denied'
-    });
-  }
-
+// @route   DELETE /api/auth/employees/:id
+// @desc    Delete an employee (Admin access)
+// @access  Private - Admin only
+router.delete('/employees/:id', verifyToken, requireRole(['admin']), async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
+    const { id } = req.params;
+    
+    // Prevent admin from deleting themselves
+    if (id === req.user.id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete your own account'
+      });
+    }
+    
+    // Find and delete the user
+    const user = await User.findByIdAndDelete(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Employee deleted successfully'
+    });
   } catch (error) {
-    res.status(401).json({
+    console.error('Delete employee error:', error);
+    res.status(500).json({
       success: false,
-      message: 'Token is not valid'
+      message: 'Server error while deleting employee',
+      error: error.message
     });
   }
-}
+});
+
+// @route   GET /api/auth/user-permissions
+// @desc    Get current user permissions
+// @access  Private
+router.get('/user-permissions', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('role department');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const userPermissions = getRoleMenuAccess(user.role);
+    
+    res.json({
+      success: true,
+      permissions: userPermissions,
+      role: user.role,
+      displayName: getRoleDisplayName(user.role)
+    });
+  } catch (error) {
+    console.error('Get user permissions error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching permissions',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;

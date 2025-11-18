@@ -21,7 +21,13 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin', 'sales_manager', 'vice_admin', 'senior_manager', 'team_lead', 'project_manager', 'hr_manager', 'finance_manager', 'operations_manager', 'marketing_manager', 'it_manager', 'executive', 'assistant_manager'],
+    enum: [
+      'user', 'admin',
+      'deputy_manager', 'assistant_manager', 'manager',
+      'senior_manager', 'sales_manager', 'president', 'marketing_coordinator', 'agm',
+      'executive', 'accounts_executive', 'zonal_manager',
+      'technical_head', 'tester', 'territory_manager', 'sr_general_manager', 'business_head'
+    ],
     default: 'user'
   },
   // Employee specific fields
@@ -48,7 +54,7 @@ const userSchema = new mongoose.Schema({
   },
   department: {
     type: String,
-    enum: ['sales', 'marketing', 'hr', 'finance', 'it', 'operations', ''],
+    enum: ['sales', 'marketing', 'hr', 'finance', 'it', 'operations', 'specifications', 'business_development', 'accounts', 'technical', 'testing', '', 'territory', 'general_management', 'head_office'],
     default: ''
   },
   reporting: {
