@@ -24,6 +24,9 @@ app.get('/', (req, res) => {
 // Auth routes
 app.use('/api/auth', require('./routes/auth'));
 
+// Roles routes
+app.use('/api/roles', require('./routes/roles'));
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

@@ -83,6 +83,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  // Custom permissions array for dynamic permission assignment
+  customPermissions: {
+    type: [String],
+    default: []
+  },
   createdAt: {
     type: Date,
     default: Date.now

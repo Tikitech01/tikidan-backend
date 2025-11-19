@@ -16,11 +16,9 @@ const MENU_ROUTE_MAPPING = {
   'projects': '/projects',
   'clients': '/clients',
   'meetings': '/meetings',
-  'expenses': '/expenses',
   'profile': '/profile',
   'my_leaves': '/my-leave',
   'team': '/team',
-  'company': '/company',
   'attendance': '/attendance',
   'employees': '/employees',
   'categories': '/categories',
@@ -193,6 +191,32 @@ router.get('/roles/:role/permissions', (req, res) => {
         menuAccess: roleData.menuAccess,
         level: roleData.level
       }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching role permissions',
+      error: error.message
+    });
+  }
+});
+
+// Get role permissions for auto-populating in employee form
+router.get('/role-permissions/:role', (req, res) => {
+  try {
+    const { role } = req.params;
+    
+    if (!roles[role]) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role provided'
+      });
+    }
+    
+    const roleData = roles[role];
+    res.json({
+      success: true,
+      permissions: roleData.menuAccess
     });
   } catch (error) {
     res.status(500).json({

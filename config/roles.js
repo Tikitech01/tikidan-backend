@@ -4,97 +4,97 @@ const roles = {
   'deputy_manager': {
     displayName: 'Deputy Manager',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'profile', 'my_leaves'],
     level: 'management'
   },
   'assistant_manager': {
     displayName: 'Assistant Manager',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'profile', 'my_leaves'],
     level: 'management'
   },
   'manager': {
     displayName: 'Manager',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'profile', 'my_leaves'],
     level: 'management'
   },
   'senior_manager': {
     displayName: 'Senior Manager',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'profile', 'my_leaves'],
     level: 'senior_management'
   },
   'sales_manager': {
     displayName: 'Sales Manager',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'profile', 'my_leaves'],
     level: 'management'
   },
   'president': {
     displayName: 'President',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'team', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'team', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'company_profile', 'profile', 'my_leaves'],
     level: 'executive'
   },
   'marketing_coordinator': {
     displayName: 'Marketing Coordinator',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'expenses_view', 'expenses_create', 'profile', 'my_leaves'],
     level: 'executive'
   },
   'agm': {
     displayName: 'AGM',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'profile', 'my_leaves'],
     level: 'senior_management'
   },
   'executive': {
     displayName: 'Executive',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'expenses_view', 'expenses_create', 'profile', 'my_leaves'],
     level: 'executive'
   },
   'accounts_executive': {
     displayName: 'Accounts Executive',
     department: '',
-    menuAccess: ['dashboard', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'expenses_manage', 'expenses_settings', 'profile', 'my_leaves'],
     level: 'executive'
   },
   'zonal_manager': {
     displayName: 'Zonal Manager',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'profile', 'my_leaves'],
     level: 'management'
   },
   'technical_head': {
     displayName: 'Technical Head',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses_view', 'expenses_create', 'profile', 'my_leaves'],
     level: 'management'
   },
   'tester': {
     displayName: 'Tester',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'expenses_view', 'expenses_create', 'profile', 'my_leaves'],
     level: 'staff'
   },
   'territory_manager': {
     displayName: 'Territory Manager',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'expenses_view', 'expenses_create', 'profile', 'my_leaves'],
     level: 'management'
   },
   'sr_general_manager': {
     displayName: 'Sr. General Manager',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'profile', 'my_leaves'],
     level: 'senior_management'
   },
   'business_head': {
     displayName: 'Business Head',
     department: '',
-    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'projects', 'clients', 'meetings', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'profile', 'my_leaves'],
     level: 'executive'
   },
 
@@ -102,13 +102,13 @@ const roles = {
   'admin': {
     displayName: 'Administrator',
     department: '',
-    menuAccess: ['*'], // Full access
+    menuAccess: ['dashboard', 'projects', 'clients', 'team', 'expenses_view', 'expenses_create', 'expenses_review', 'expenses_reports', 'expenses_manage', 'expenses_settings', 'profile', 'my_leaves', 'team_leave', 'leave_settings', 'company_profile', 'attendance', 'employees', 'categories', 'department', 'branches', 'holiday', 'billing'], // Full access except meetings
     level: 'system'
   },
   'user': {
     displayName: 'User',
     department: '',
-    menuAccess: ['dashboard', 'expenses', 'profile', 'my_leaves'],
+    menuAccess: ['dashboard', 'expenses_view', 'expenses_create', 'profile', 'my_leaves'],
     level: 'basic'
   }
 };
