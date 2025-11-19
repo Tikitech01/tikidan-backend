@@ -1,1 +1,0 @@
-# saleseta-node-backend
