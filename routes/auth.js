@@ -220,6 +220,14 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Check if user is suspended
+    if (user.status === 'Suspended by Admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Account suspended by admin. Please contact your administrator.'
+      });
+    }
+
     // Get user permissions (custom or role-based)
     const userPermissions = getUserPermissions(user);
 
@@ -479,6 +487,92 @@ router.get('/employees/:id', verifyToken, requireRole(['admin']), async (req, re
     res.status(500).json({
       success: false,
       message: 'Server error while fetching employee',
+      error: error.message
+    });
+  }
+});
+
+// @route   PATCH /api/auth/employees/:id/suspend
+// @desc    Suspend an employee (Admin access)
+// @access  Private - Admin only
+router.patch('/employees/:id/suspend', verifyToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Prevent admin from suspending themselves
+    if (id === req.user.id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot suspend your own account'
+      });
+    }
+    
+    // Find and update the user
+    const user = await User.findByIdAndUpdate(
+      id, 
+      { 
+        status: 'Suspended by Admin',
+        suspensionReason: 'Suspended by administrator'
+      }, 
+      { new: true }
+    ).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Employee suspended successfully',
+      employee: user
+    });
+  } catch (error) {
+    console.error('Suspend employee error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while suspending employee',
+      error: error.message
+    });
+  }
+});
+
+// @route   PATCH /api/auth/employees/:id/unsuspend
+// @desc    Unsuspend an employee (Admin access)
+// @access  Private - Admin only
+router.patch('/employees/:id/unsuspend', verifyToken, requireRole(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find and update the user
+    const user = await User.findByIdAndUpdate(
+      id, 
+      { 
+        status: 'Active',
+        suspensionReason: null
+      }, 
+      { new: true }
+    ).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Employee activated successfully',
+      employee: user
+    });
+  } catch (error) {
+    console.error('Unsuspend employee error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while activating employee',
       error: error.message
     });
   }

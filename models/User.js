@@ -94,6 +94,15 @@ const userSchema = new mongoose.Schema({
     ref: 'User',
     default: null
   },
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive', 'Suspended by Admin'],
+    default: 'Active'
+  },
+  suspensionReason: {
+    type: String,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
