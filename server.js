@@ -27,6 +27,9 @@ app.use('/api/auth', require('./routes/auth'));
 // Roles routes
 app.use('/api/roles', require('./routes/roles'));
 
+// Clients routes with cascade deletion
+app.use('/api/clients', require('./routes/clients-final'));
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
