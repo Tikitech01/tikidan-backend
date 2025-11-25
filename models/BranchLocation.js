@@ -39,7 +39,18 @@ const branchLocationSchema = new mongoose.Schema({
   timestamps: true
 });
 
+
+// Virtual field to populate contacts
+branchLocationSchema.virtual('contacts', {
+  ref: 'ContactPerson',
+  localField: '_id',
+  foreignField: 'branchLocation'
+});
+
 // Index for better query performance
 branchLocationSchema.index({ client: 1 });
+
+branchLocationSchema.set('toJSON', { virtuals: true });
+branchLocationSchema.set('toObject', { virtuals: true });
 
 module.exports = mongoose.model('BranchLocation', branchLocationSchema);

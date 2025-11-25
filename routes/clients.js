@@ -5,22 +5,31 @@ const BranchLocation = require('../models/BranchLocation');
 const ContactPerson = require('../models/ContactPerson');
 const Meeting = require('../models/Meeting');
 const Project = require('../models/Project');
+const { verifyToken } = require('../middleware/auth');
 
 const router = express.Router();
 
 // @route   GET /api/clients
-// @desc    Get all clients with their locations and contact count
-// @access  Public (add authentication middleware later)
-router.get('/', async (req, res) => {
+// @desc    Get all clients created by the authenticated user
+// @access  Private
+router.get('/', verifyToken, async (req, res) => {
   try {
-    console.log('Fetching all clients...');
-    const clients = await Client.find()
+    console.log('Fetching clients for user:', req.user._id);
+    
+    // If user is admin, fetch all clients; else only those created by the user
+    const query = req.user.role === 'admin' ? {} : { createdBy: req.user._id };
+    const clients = await Client.find(query)
       .populate({
         path: 'locations',
         populate: {
           path: 'contacts',
           model: 'ContactPerson'
         }
+      })
+      .populate({
+        path: 'createdBy',
+        model: 'User',
+        select: 'name email'
       })
       .sort({ createdAt: -1 });
 
@@ -38,7 +47,10 @@ router.get('/', async (req, res) => {
           id: client._id.toString(),
           category: client.category,
           clientName: client.clientName,
-          salesPerson: client.salesPerson,
+          salesPerson:
+            client.createdBy && (client.createdBy.name || client.createdBy.email)
+              ? (client.createdBy.name ? client.createdBy.name : client.createdBy.email)
+              : 'Not assigned',
           status: client.status,
           totalMeetings: meetingCount,
           totalProjects: projectCount,
@@ -82,11 +94,14 @@ router.get('/', async (req, res) => {
 });
 
 // @route   GET /api/clients/:id
-// @desc    Get single client with all related data
-// @access  Public (add authentication middleware later)
-router.get('/:id', async (req, res) => {
+// @desc    Get single client created by the authenticated user
+// @access  Private
+router.get('/:id', verifyToken, async (req, res) => {
   try {
-    const client = await Client.findById(req.params.id)
+    const client = await Client.findOne({
+      _id: req.params.id,
+      createdBy: req.user._id
+    })
       .populate({
         path: 'locations',
         model: 'BranchLocation',
@@ -99,7 +114,7 @@ router.get('/:id', async (req, res) => {
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: 'Client not found'
+        message: 'Client not found or access denied'
       });
     }
 
@@ -159,27 +174,33 @@ router.get('/:id', async (req, res) => {
 
 // @route   POST /api/clients
 // @desc    Create a new client with locations and contacts
-// @access  Public (add authentication middleware later)
-router.post('/', async (req, res) => {
+// @access  Private
+router.post('/', verifyToken, async (req, res) => {
   console.log('Received POST request to /api/clients');
   console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Creating client for user:', req.user._id);
   
   try {
     const { category, clientName, salesPerson, locations } = req.body;
-    
     console.log('Extracted data:', { category, clientName, salesPerson, locations });
 
-    // Create client
+    // Validate createdBy
+    if (!req.user || !req.user._id) {
+      console.error('Missing req.user or req.user._id!');
+      return res.status(401).json({ success: false, message: 'User authentication failed, cannot set createdBy.' });
+    }
+
+    // Create client with the authenticated user as creator
     const client = new Client({
       category,
       clientName,
-      salesPerson
+      salesPerson,
+      createdBy: req.user._id
     });
-    
     console.log('Client object created:', client);
 
     await client.save();
-    console.log('Client saved successfully with ID:', client._id);
+    console.log('Client saved successfully with ID:', client._id, 'createdBy:', client.createdBy);
 
     const createdLocations = [];
     const createdContacts = [];
@@ -305,14 +326,15 @@ router.post('/', async (req, res) => {
 });
 
 // @route   PUT /api/clients/:id
-// @desc    Update client
-// @access  Public (add authentication middleware later)
-router.put('/:id', async (req, res) => {
+// @desc    Update client (only if created by authenticated user)
+// @access  Private
+router.put('/:id', verifyToken, async (req, res) => {
   try {
     const { category, clientName, salesPerson, status } = req.body;
 
-    const client = await Client.findByIdAndUpdate(
-      req.params.id,
+    // Only allow update if client belongs to the authenticated user
+    const client = await Client.findOneAndUpdate(
+      { _id: req.params.id, createdBy: req.user._id },
       { category, clientName, salesPerson, status },
       { new: true, runValidators: true }
     );
@@ -320,7 +342,7 @@ router.put('/:id', async (req, res) => {
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: 'Client not found'
+        message: 'Client not found or access denied'
       });
     }
 
@@ -340,21 +362,25 @@ router.put('/:id', async (req, res) => {
 });
 
 // @route   DELETE /api/clients/:id
-// @desc    Delete client with cascade deletion of all related data
-// @access  Public (add authentication middleware later)
-router.delete('/:id', async (req, res) => {
+// @desc    Delete client with cascade deletion of all related data (only if created by authenticated user)
+// @access  Private
+router.delete('/:id', verifyToken, async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const clientId = req.params.id;
 
-    // Check if client exists
-    const client = await Client.findById(clientId);
+    // Check if client exists and belongs to the authenticated user
+    const client = await Client.findOne({
+      _id: clientId,
+      createdBy: req.user._id
+    });
+    
     if (!client) {
       return res.status(404).json({
         success: false,
-        message: 'Client not found'
+        message: 'Client not found or access denied'
       });
     }
 

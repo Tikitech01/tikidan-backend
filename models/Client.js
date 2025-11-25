@@ -26,6 +26,11 @@ const clientSchema = new mongoose.Schema({
     type: String,
     enum: ['Active', 'Inactive', 'Suspended'],
     default: 'Active'
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true // Enforce createdBy for all new clients
   }
 }, {
   timestamps: true
@@ -42,6 +47,7 @@ clientSchema.virtual('locations', {
 clientSchema.index({ clientName: 1 });
 clientSchema.index({ category: 1 });
 clientSchema.index({ status: 1 });
+clientSchema.index({ createdBy: 1 });
 
 // Make virtuals included in JSON output
 clientSchema.set('toJSON', { virtuals: true });
