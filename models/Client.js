@@ -32,6 +32,13 @@ const clientSchema = new mongoose.Schema({
     ref: 'User',
     required: true // Enforce createdBy for all new clients
   }
+  ,
+  // Track client transfer history
+  transferHistory: [{
+    from: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    to: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    transferredAt: { type: Date, default: Date.now }
+  }]
 }, {
   timestamps: true
 });

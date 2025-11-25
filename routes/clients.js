@@ -29,7 +29,7 @@ router.get('/', verifyToken, async (req, res) => {
       .populate({
         path: 'createdBy',
         model: 'User',
-        select: 'name email'
+        select: 'name email _id'
       })
       .sort({ createdAt: -1 });
 
@@ -40,8 +40,8 @@ router.get('/', verifyToken, async (req, res) => {
       clients.map(async (client) => {
         const meetingCount = await Meeting.countDocuments({ client: client._id });
         const projectCount = await Project.countDocuments({ client: client._id });
-        
-        // Transform the data structure to match frontend expectations
+        // Always include createdBy as string (ObjectId) for filtering
+        let createdById = client.createdBy && typeof client.createdBy === 'object' && client.createdBy._id ? client.createdBy._id.toString() : client.createdBy;
         return {
           _id: client._id,
           id: client._id.toString(),
@@ -56,6 +56,7 @@ router.get('/', verifyToken, async (req, res) => {
           totalProjects: projectCount,
           createdAt: client.createdAt,
           updatedAt: client.updatedAt,
+          createdBy: createdById,
           locations: client.locations ? client.locations.map(location => ({
             _id: location._id,
             id: location._id.toString(),
@@ -447,6 +448,56 @@ router.delete('/:id', verifyToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting client and related data',
+      error: error.message
+    });
+  }
+});
+
+// @route   POST /api/clients/:id/transfer
+// @desc    Transfer client to another employee and record transfer history
+// @access  Admin only
+router.post('/:id/transfer', verifyToken, async (req, res) => {
+  try {
+    // Only admin can transfer clients
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. Only admin can transfer clients.' });
+    }
+
+    const clientId = req.params.id;
+    const { toEmployeeId } = req.body;
+
+    if (!toEmployeeId) {
+      return res.status(400).json({ success: false, message: 'Target employee ID is required.' });
+    }
+
+    // Find the client
+    const client = await Client.findById(clientId);
+    if (!client) {
+      return res.status(404).json({ success: false, message: 'Client not found.' });
+    }
+
+    // Record transfer history
+    client.transferHistory = client.transferHistory || [];
+    client.transferHistory.push({
+      from: client.createdBy,
+      to: toEmployeeId,
+      transferredAt: new Date()
+    });
+
+    // Update createdBy to new employee
+    client.createdBy = toEmployeeId;
+    await client.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Client transferred successfully.',
+      data: client
+    });
+  } catch (error) {
+    console.error('Error transferring client:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error transferring client',
       error: error.message
     });
   }
