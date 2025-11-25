@@ -32,10 +32,36 @@ router.get('/', async (req, res) => {
         const meetingCount = await Meeting.countDocuments({ client: client._id });
         const projectCount = await Project.countDocuments({ client: client._id });
         
+        // Transform the data structure to match frontend expectations
         return {
-          ...client.toJSON(), // Use toJSON to include virtuals
+          _id: client._id,
+          id: client._id.toString(),
+          category: client.category,
+          clientName: client.clientName,
+          salesPerson: client.salesPerson,
+          status: client.status,
           totalMeetings: meetingCount,
-          totalProjects: projectCount
+          totalProjects: projectCount,
+          createdAt: client.createdAt,
+          updatedAt: client.updatedAt,
+          locations: client.locations ? client.locations.map(location => ({
+            _id: location._id,
+            id: location._id.toString(),
+            name: location.name,
+            addressLine1: location.addressLine1,
+            addressLine2: location.addressLine2,
+            city: location.city,
+            state: location.state,
+            country: location.country,
+            contacts: location.contacts ? location.contacts.map(contact => ({
+              _id: contact._id,
+              id: contact._id.toString(),
+              name: contact.name,
+              email: contact.email,
+              phone: contact.phone,
+              designation: contact.designation
+            })) : []
+          })) : []
         };
       })
     );
@@ -81,10 +107,42 @@ router.get('/:id', async (req, res) => {
     const meetings = await Meeting.find({ client: client._id }).sort({ date: -1 });
     const projects = await Project.find({ client: client._id }).sort({ createdAt: -1 });
 
+    // Transform the data structure to match frontend expectations
+    const transformedClient = {
+      _id: client._id,
+      id: client._id.toString(),
+      category: client.category,
+      clientName: client.clientName,
+      salesPerson: client.salesPerson,
+      status: client.status,
+      totalMeetings: meetings.length,
+      totalProjects: projects.length,
+      createdAt: client.createdAt,
+      updatedAt: client.updatedAt,
+      locations: client.locations ? client.locations.map(location => ({
+        _id: location._id,
+        id: location._id.toString(),
+        name: location.name,
+        addressLine1: location.addressLine1,
+        addressLine2: location.addressLine2,
+        city: location.city,
+        state: location.state,
+        country: location.country,
+        contacts: location.contacts ? location.contacts.map(contact => ({
+          _id: contact._id,
+          id: contact._id.toString(),
+          name: contact.name,
+          email: contact.email,
+          phone: contact.phone,
+          designation: contact.designation
+        })) : []
+      })) : []
+    };
+
     res.status(200).json({
       success: true,
       data: {
-        client,
+        client: transformedClient,
         meetings,
         projects
       }
@@ -172,7 +230,7 @@ router.post('/', async (req, res) => {
 
     console.log('All data saved successfully');
 
-    // Fetch the complete client with populated data
+    // Fetch the complete client with populated data and transform structure
     const populatedClient = await Client.findById(client._id)
       .populate({
         path: 'locations',
@@ -184,12 +242,47 @@ router.post('/', async (req, res) => {
         }
       });
       
+    console.log('Raw populated client:', JSON.stringify(populatedClient, null, 2));
+        
+    // Transform the data structure to match frontend expectations
+    const transformedClient = {
+      _id: populatedClient._id,
+      id: populatedClient._id.toString(),
+      category: populatedClient.category,
+      clientName: populatedClient.clientName,
+      salesPerson: populatedClient.salesPerson,
+      status: populatedClient.status,
+      totalMeetings: 0,
+      totalProjects: 0,
+      createdAt: populatedClient.createdAt,
+      updatedAt: populatedClient.updatedAt,
+      locations: populatedClient.locations ? populatedClient.locations.map(location => ({
+        _id: location._id,
+        id: location._id.toString(),
+        name: location.name,
+        addressLine1: location.addressLine1,
+        addressLine2: location.addressLine2,
+        city: location.city,
+        state: location.state,
+        country: location.country,
+        contacts: location.contacts ? location.contacts.map(contact => ({
+          _id: contact._id,
+          id: contact._id.toString(),
+          name: contact.name,
+          email: contact.email,
+          phone: contact.phone,
+          designation: contact.designation
+        })) : []
+      })) : []
+    };
+    
+    console.log('Transformed client:', JSON.stringify(transformedClient, null, 2));
     console.log('Client populated successfully');
 
     res.status(201).json({
       success: true,
       message: 'Client created successfully',
-      data: populatedClient
+      data: transformedClient
     });
     
     console.log('Response sent successfully');
