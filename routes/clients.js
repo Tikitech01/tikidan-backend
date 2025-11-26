@@ -50,8 +50,16 @@ router.get('/', verifyToken, async (req, res) => {
       clients.map(async (client) => {
         const meetingCount = await Meeting.countDocuments({ client: client._id });
         const projectCount = await Project.countDocuments({ client: client._id });
-        // Always include createdBy as string (ObjectId) for filtering
-        let createdById = client.createdBy && typeof client.createdBy === 'object' && client.createdBy._id ? client.createdBy._id.toString() : client.createdBy;
+        // Keep createdBy as object with name and email
+        let createdByObj = client.createdBy;
+        if (typeof client.createdBy === 'object' && client.createdBy._id) {
+          createdByObj = {
+            name: client.createdBy.name,
+            email: client.createdBy.email,
+            _id: client.createdBy._id
+          };
+        }
+        
         return {
           _id: client._id,
           id: client._id.toString(),
@@ -66,7 +74,7 @@ router.get('/', verifyToken, async (req, res) => {
           totalProjects: projectCount,
           createdAt: client.createdAt,
           updatedAt: client.updatedAt,
-          createdBy: createdById,
+          createdBy: createdByObj,
           transferHistory: client.transferHistory,
           locations: client.locations ? client.locations.map(location => ({
             _id: location._id,
