@@ -31,6 +31,16 @@ router.get('/', verifyToken, async (req, res) => {
         model: 'User',
         select: 'name email _id'
       })
+      .populate({
+        path: 'transferHistory.from',
+        model: 'User',
+        select: 'name email'
+      })
+      .populate({
+        path: 'transferHistory.to',
+        model: 'User',
+        select: 'name email'
+      })
       .sort({ createdAt: -1 });
 
     console.log(`Found ${clients.length} clients`);
@@ -57,6 +67,7 @@ router.get('/', verifyToken, async (req, res) => {
           createdAt: client.createdAt,
           updatedAt: client.updatedAt,
           createdBy: createdById,
+          transferHistory: client.transferHistory,
           locations: client.locations ? client.locations.map(location => ({
             _id: location._id,
             id: location._id.toString(),
@@ -254,6 +265,17 @@ router.post('/', verifyToken, async (req, res) => {
 
     // Fetch the complete client with populated data and transform structure
     const populatedClient = await Client.findById(client._id)
+      .populate('createdBy', 'name email')
+      .populate({
+        path: 'transferHistory.from',
+        model: 'User',
+        select: 'name email'
+      })
+      .populate({
+        path: 'transferHistory.to',
+        model: 'User',
+        select: 'name email'
+      })
       .populate({
         path: 'locations',
         model: 'BranchLocation',
@@ -278,6 +300,8 @@ router.post('/', verifyToken, async (req, res) => {
       totalProjects: 0,
       createdAt: populatedClient.createdAt,
       updatedAt: populatedClient.updatedAt,
+      createdBy: populatedClient.createdBy,
+      transferHistory: populatedClient.transferHistory,
       locations: populatedClient.locations ? populatedClient.locations.map(location => ({
         _id: location._id,
         id: location._id.toString(),
