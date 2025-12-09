@@ -27,6 +27,7 @@ router.get('/', async (req, res) => {
     const projects = await Project.find(query)
       .populate('createdBy', 'name email')
       .populate('assignTo', 'name email')
+      .populate('assignBy', 'name email')
       .sort({ createdAt: -1 });
 
     res.json({
@@ -48,7 +49,8 @@ router.get('/:id', async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
       .populate('createdBy', 'name email')
-      .populate('assignTo', 'name email');
+      .populate('assignTo', 'name email')
+      .populate('assignBy', 'name email');
 
     if (!project) {
       return res.status(404).json({
@@ -121,7 +123,8 @@ router.post('/', async (req, res) => {
     // Populate references
     const populatedProject = await Project.findById(savedProject._id)
       .populate('createdBy', 'name email')
-      .populate('assignTo', 'name email');
+      .populate('assignTo', 'name email')
+      .populate('assignBy', 'name email');
 
     res.status(201).json({
       success: true,
@@ -188,7 +191,8 @@ router.put('/:id', async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     ).populate('createdBy', 'name email')
-     .populate('assignTo', 'name email');
+     .populate('assignTo', 'name email')
+     .populate('assignBy', 'name email');
 
     if (!updatedProject) {
       return res.status(404).json({
