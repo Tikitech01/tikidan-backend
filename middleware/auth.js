@@ -4,9 +4,14 @@ const User = require('../models/User');
 // Middleware to verify JWT token
 const verifyToken = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const authHeader = req.header('Authorization');
+    console.log('Auth header:', authHeader ? `${authHeader.substring(0, 40)}...` : 'NO HEADER');
+    
+    const token = authHeader?.replace('Bearer ', '');
+    console.log('Extracted token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
 
     if (!token) {
+      console.warn('Authorization header missing or invalid');
       return res.status(401).json({
         success: false,
         message: 'No token, authorization denied'
@@ -14,9 +19,12 @@ const verifyToken = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Token decoded successfully:', decoded.id);
+    
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {
+      console.warn('User not found for ID:', decoded.id);
       return res.status(401).json({
         success: false,
         message: 'User not found'
@@ -26,6 +34,7 @@ const verifyToken = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    console.error('Token verification error:', error.message);
     res.status(401).json({
       success: false,
       message: 'Token is not valid'

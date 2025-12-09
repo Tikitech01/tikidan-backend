@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const meetingSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: true,
     trim: true
   },
   description: {
@@ -24,8 +23,8 @@ const meetingSchema = new mongoose.Schema({
     default: 60
   },
   location: {
-    type: String,
-    trim: true
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'BranchLocation'
   },
   type: {
     type: String,
@@ -41,6 +40,22 @@ const meetingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
     required: true
+  },
+  contactPerson: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ContactPerson'
+  },
+  project: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Project'
+  },
+  products: [{
+    type: String,
+    trim: true
+  }],
+  comments: {
+    type: String,
+    trim: true
   },
   attendees: [{
     name: {

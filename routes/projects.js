@@ -6,6 +6,30 @@ const { verifyToken } = require('../middleware/auth');
 // Middleware to check authentication
 router.use(verifyToken);
 
+// GET all projects for forms (no filtering) - for dropdown forms like meetings
+router.get('/all-for-forms', async (req, res) => {
+  try {
+    console.log('Fetching all projects for forms (no filtering)');
+    
+    // Fetch ALL projects regardless of who created them or assigned to
+    const projects = await Project.find()
+      .select('_id title')
+      .sort({ title: 1 });
+
+    res.json({
+      success: true,
+      data: projects
+    });
+  } catch (error) {
+    console.error('Error fetching all projects for forms:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch projects',
+      error: error.message
+    });
+  }
+});
+
 // GET all projects (admin sees all, employees see their own)
 router.get('/', async (req, res) => {
   try {

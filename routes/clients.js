@@ -9,6 +9,39 @@ const { verifyToken } = require('../middleware/auth');
 
 const router = express.Router();
 
+// @route   GET /api/clients/all-for-forms
+// @desc    Get ALL clients (no filtering) - for dropdown forms like meetings
+// @access  Private - Any authenticated user
+router.get('/all-for-forms', verifyToken, async (req, res) => {
+  try {
+    console.log('Fetching all clients for forms (no filtering)');
+    
+    // Fetch ALL clients regardless of who created them
+    const clients = await Client.find()
+      .populate({
+        path: 'locations',
+        populate: {
+          path: 'contacts',
+          model: 'ContactPerson'
+        }
+      })
+      .select('_id clientName locations')
+      .sort({ clientName: 1 });
+
+    res.json({
+      success: true,
+      data: clients
+    });
+  } catch (error) {
+    console.error('Error fetching all clients for forms:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch clients',
+      error: error.message
+    });
+  }
+});
+
 // @route   GET /api/clients
 // @desc    Get all clients created by the authenticated user
 // @access  Private
