@@ -6,110 +6,72 @@ const projectSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  description: {
+  projectType: {
+    type: String,
+    enum: ['residential', 'hospital', 'hotel', 'commercial space', 'airport', 'railway', 'mes', 'landmark project'],
+    trim: true
+  },
+  contractor: {
     type: String,
     trim: true
   },
+  consultant: {
+    type: String,
+    trim: true
+  },
+  sizeOfProject: {
+    type: Number,
+    min: 0,
+    description: 'Size in SQM (Square Meters)'
+  },
+  products: [{
+    type: String,
+    enum: ['Waterproofing Membranes', 'Acoustic insulation', 'Spray', 'Coatings', 'Drainage boards', 'Thermal Insulation', 'Floorings']
+  }],
+  stage: {
+    type: String,
+    enum: ['suspect', 'prospect', 'source-approver-submission', 'source-approved', 'negotiation', 'confirmed'],
+    trim: true
+  },
+  assignTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  assignBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   startDate: {
-    type: Date,
-    required: true
+    type: Date
   },
   endDate: {
     type: Date
   },
-  budget: {
-    type: Number,
-    min: 0
-  },
-  status: {
-    type: String,
-    enum: ['Planning', 'In Progress', 'Completed', 'On Hold', 'Cancelled'],
-    default: 'Planning'
-  },
-  priority: {
-    type: String,
-    enum: ['Low', 'Medium', 'High', 'Critical'],
-    default: 'Medium'
-  },
-  client: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Client',
-    required: true
-  },
-  teamMembers: [{
-    name: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    role: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    email: {
-      type: String,
-      trim: true,
-      lowercase: true
-    }
-  }],
-  milestones: [{
-    name: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    description: {
-      type: String,
-      trim: true
-    },
-    dueDate: {
-      type: Date
-    },
-    completed: {
-      type: Boolean,
-      default: false
-    },
-    completedDate: {
-      type: Date
-    }
-  }],
-  deliverables: [{
-    name: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    description: {
-      type: String,
-      trim: true
-    },
-    dueDate: {
-      type: Date
-    },
-    status: {
-      type: String,
-      enum: ['Pending', 'In Review', 'Approved', 'Rejected'],
-      default: 'Pending'
-    }
-  }],
-  progress: {
-    type: Number,
-    min: 0,
-    max: 100,
-    default: 0
-  },
-  notes: {
+  description: {
     type: String,
     trim: true
+  },
+  meeting: {
+    type: String,
+    trim: true
+  },
+  lastUpdate: {
+    type: Date,
+    default: Date.now
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   }
 }, {
   timestamps: true
 });
 
 // Index for better query performance
-projectSchema.index({ client: 1 });
-projectSchema.index({ status: 1 });
+projectSchema.index({ createdBy: 1 });
+projectSchema.index({ assignTo: 1 });
+projectSchema.index({ stage: 1 });
 projectSchema.index({ startDate: 1 });
 
 module.exports = mongoose.model('Project', projectSchema);

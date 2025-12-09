@@ -649,7 +649,7 @@ router.get('/employees-list', verifyToken, requireRole(['admin']), async (req, r
 // @access  Private
 router.get('/team-members', verifyToken, async (req, res) => {
   try {
-    const currentUserId = req.user.id;
+    const currentUserId = req.user._id || req.user.id;
     
     // Find all employees who report to the current user
     const teamMembers = await User.find({ reportsTo: currentUserId })

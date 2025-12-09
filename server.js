@@ -30,6 +30,9 @@ app.use('/api/roles', require('./routes/roles'));
 // Clients routes with cascade deletion
 app.use('/api/clients', require('./routes/clients'));
 
+// Projects routes
+app.use('/api/projects', require('./routes/projects'));
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
