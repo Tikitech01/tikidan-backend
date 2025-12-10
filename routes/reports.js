@@ -616,4 +616,59 @@ router.get('/map/all-meetings', async (req, res) => {
   }
 });
 
+// GET employee professional details - clients created and meetings done
+router.get('/employee/:id/details', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch employee info from User model (to get name and designation)
+    const User = require('../models/User');
+    const employee = await User.findById(id).select('name designation role');
+
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found'
+      });
+    }
+
+    // Get total clients created by this employee
+    const totalClients = await Client.countDocuments({ createdBy: id });
+
+    // Get all meetings where this employee is the createdBy/assigned user
+    const meetings = await Meeting.find({ createdBy: id })
+      .populate('client', 'clientName')
+      .populate('location', 'name address city')
+      .lean();
+
+    const totalMeetings = meetings.length;
+
+    res.json({
+      success: true,
+      data: {
+        name: employee.name,
+        designation: employee.designation || employee.role,
+        totalClients,
+        totalMeetings,
+        meetings: meetings.map(m => ({
+          _id: m._id,
+          title: m.title,
+          date: m.date,
+          time: m.time,
+          client: m.client,
+          location: m.location,
+          gpsCoordinates: m.gpsCoordinates
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching employee details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch employee details',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
