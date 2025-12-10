@@ -9,11 +9,15 @@ router.use(verifyToken);
 // GET all meetings
 router.get('/', async (req, res) => {
   try {
-    const meetings = await Meeting.find()
+    const userId = req.user._id || req.user.id;
+    
+    // Get meetings created by the logged-in user
+    const meetings = await Meeting.find({ createdBy: userId })
       .populate('client', 'clientName')
       .populate('contactPerson', 'name email')
       .populate('location', 'name')
       .populate('project', 'title')
+      .populate('createdBy', 'name email')
       .sort({ date: -1 });
 
     res.json({
@@ -33,16 +37,27 @@ router.get('/', async (req, res) => {
 // GET single meeting by ID
 router.get('/:id', async (req, res) => {
   try {
+    const userId = req.user._id || req.user.id;
+    
     const meeting = await Meeting.findById(req.params.id)
       .populate('client', 'clientName')
       .populate('contactPerson', 'name email')
       .populate('location', 'name')
-      .populate('project', 'title');
+      .populate('project', 'title')
+      .populate('createdBy', 'name email');
 
     if (!meeting) {
       return res.status(404).json({
         success: false,
         message: 'Meeting not found'
+      });
+    }
+
+    // Check if user has permission to view this meeting
+    if (meeting.createdBy._id.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to view this meeting'
       });
     }
 
@@ -63,6 +78,7 @@ router.get('/:id', async (req, res) => {
 // CREATE new meeting
 router.post('/', async (req, res) => {
   try {
+    const userId = req.user._id || req.user.id;
     const {
       title,
       date,
@@ -78,7 +94,8 @@ router.post('/', async (req, res) => {
       comments,
       attendees,
       meetingNotes,
-      followUpRequired
+      followUpRequired,
+      gpsCoordinates
     } = req.body;
 
     // Validate required fields
@@ -92,7 +109,7 @@ router.post('/', async (req, res) => {
     // Generate title if not provided
     const meetingTitle = title || `Meeting - ${new Date(date).toLocaleDateString()}`;
 
-    // Create new meeting
+    // Create new meeting with GPS coordinates
     const newMeeting = new Meeting({
       title: meetingTitle,
       date: new Date(date),
@@ -108,7 +125,14 @@ router.post('/', async (req, res) => {
       comments: comments || '',
       attendees: attendees || [],
       meetingNotes: meetingNotes || '',
-      followUpRequired: followUpRequired || false
+      followUpRequired: followUpRequired || false,
+      createdBy: userId,
+      gpsCoordinates: gpsCoordinates ? {
+        latitude: gpsCoordinates.latitude,
+        longitude: gpsCoordinates.longitude,
+        accuracy: gpsCoordinates.accuracy || null,
+        capturedAt: new Date()
+      } : null
     });
 
     const savedMeeting = await newMeeting.save();
@@ -118,7 +142,8 @@ router.post('/', async (req, res) => {
       .populate('client', 'clientName')
       .populate('contactPerson', 'name email')
       .populate('location', 'name')
-      .populate('project', 'title');
+      .populate('project', 'title')
+      .populate('createdBy', 'name email');
 
     res.status(201).json({
       success: true,
@@ -138,6 +163,24 @@ router.post('/', async (req, res) => {
 // UPDATE meeting by ID
 router.put('/:id', async (req, res) => {
   try {
+    const userId = req.user._id || req.user.id;
+    
+    // Check if meeting exists and user owns it
+    const existingMeeting = await Meeting.findById(req.params.id);
+    if (!existingMeeting) {
+      return res.status(404).json({
+        success: false,
+        message: 'Meeting not found'
+      });
+    }
+
+    if (existingMeeting.createdBy.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to update this meeting'
+      });
+    }
+
     const {
       title,
       date,
@@ -192,14 +235,8 @@ router.put('/:id', async (req, res) => {
     ).populate('client', 'clientName')
      .populate('contactPerson', 'name email')
      .populate('location', 'name')
-     .populate('project', 'title');
-
-    if (!updatedMeeting) {
-      return res.status(404).json({
-        success: false,
-        message: 'Meeting not found'
-      });
-    }
+     .populate('project', 'title')
+     .populate('createdBy', 'name email');
 
     res.json({
       success: true,
@@ -219,14 +256,26 @@ router.put('/:id', async (req, res) => {
 // DELETE meeting by ID
 router.delete('/:id', async (req, res) => {
   try {
-    const meeting = await Meeting.findByIdAndDelete(req.params.id);
-
+    const userId = req.user._id || req.user.id;
+    
+    // Check if meeting exists and user owns it
+    const meeting = await Meeting.findById(req.params.id);
+    
     if (!meeting) {
       return res.status(404).json({
         success: false,
         message: 'Meeting not found'
       });
     }
+
+    if (meeting.createdBy.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to delete this meeting'
+      });
+    }
+
+    await Meeting.findByIdAndDelete(req.params.id);
 
     res.json({
       success: true,

@@ -81,6 +81,31 @@ const meetingSchema = new mongoose.Schema({
   followUpRequired: {
     type: Boolean,
     default: false
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  // GPS coordinates for location verification
+  gpsCoordinates: {
+    latitude: {
+      type: Number,
+      min: -90,
+      max: 90
+    },
+    longitude: {
+      type: Number,
+      min: -180,
+      max: 180
+    },
+    accuracy: {
+      type: Number,
+      description: 'Accuracy of GPS reading in meters'
+    },
+    capturedAt: {
+      type: Date
+    }
   }
 }, {
   timestamps: true
@@ -90,5 +115,6 @@ const meetingSchema = new mongoose.Schema({
 meetingSchema.index({ client: 1 });
 meetingSchema.index({ date: 1 });
 meetingSchema.index({ status: 1 });
+meetingSchema.index({ createdBy: 1 });
 
 module.exports = mongoose.model('Meeting', meetingSchema);

@@ -645,37 +645,116 @@ router.get('/employees-list', verifyToken, requireRole(['admin']), async (req, r
 });
 
 // @route   GET /api/auth/team-members
-// @desc    Get team members (employees who report to current user)
+// @desc    Get team members (employees who report to current user) with meeting stats
 // @access  Private
 router.get('/team-members', verifyToken, async (req, res) => {
   try {
     const currentUserId = req.user._id || req.user.id;
+    const Meeting = require('../models/Meeting');
     
     // Find all employees who report to the current user
     const teamMembers = await User.find({ reportsTo: currentUserId })
-      .select('_id name firstName lastName email designation role employeeId')
+      .select('_id name firstName lastName email designation role employeeId reportsTo')
       .sort({ name: 1 });
     
-    // Format the response
-    const formattedTeamMembers = teamMembers.map(employee => ({
-      id: employee._id,
-      name: employee.name || `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.email,
-      email: employee.email,
-      designation: employee.designation || '',
-      role: employee.role,
-      employeeId: employee.employeeId || ''
+    // Get meeting statistics for each team member
+    const membersWithStats = await Promise.all(teamMembers.map(async (employee) => {
+      // Count meetings for this employee
+      const meetingCount = await Meeting.countDocuments({ 
+        $or: [
+          { 'attendees.email': employee.email },
+          { createdBy: employee._id }
+        ]
+      });
+      
+      return {
+        id: employee._id,
+        name: employee.name || `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.email,
+        email: employee.email,
+        designation: employee.designation || '',
+        role: employee.role,
+        employeeId: employee.employeeId || '',
+        meetings: meetingCount,
+        average: meetingCount > 0 ? (meetingCount / 1).toFixed(1) : 'NA'
+      };
     }));
     
     res.json({
       success: true,
-      count: formattedTeamMembers.length,
-      teamMembers: formattedTeamMembers
+      count: membersWithStats.length,
+      teamMembers: membersWithStats
     });
   } catch (error) {
     console.error('Get team members error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error while fetching team members',
+      error: error.message
+    });
+  }
+});
+
+// @route   GET /api/auth/team-hierarchy
+// @desc    Get team hierarchy with all reporting relationships and metrics
+// @access  Private
+router.get('/team-hierarchy', verifyToken, async (req, res) => {
+  try {
+    const Meeting = require('../models/Meeting');
+    const currentUserId = req.user._id || req.user.id;
+    
+    // Get current user info
+    const currentUser = await User.findById(currentUserId);
+    
+    // Find direct reports
+    const directReports = await User.find({ reportsTo: currentUserId })
+      .select('_id name firstName lastName email designation role employeeId')
+      .sort({ name: 1 });
+    
+    // Get stats for direct reports
+    const reportsWithStats = await Promise.all(directReports.map(async (employee) => {
+      const meetingCount = await Meeting.countDocuments({ 
+        $or: [
+          { 'attendees.email': employee.email },
+          { createdBy: employee._id }
+        ]
+      });
+      
+      // Get employees reporting to this person (second level)
+      const secondLevelReports = await User.find({ reportsTo: employee._id })
+        .select('_id name email')
+        .countDocuments();
+      
+      return {
+        _id: employee._id,
+        id: employee._id,
+        name: employee.name || `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.email,
+        email: employee.email,
+        designation: employee.designation || '',
+        role: employee.role,
+        employeeId: employee.employeeId || '',
+        meetingCount: meetingCount,
+        reportsCount: secondLevelReports
+      };
+    }));
+    
+    res.json({
+      success: true,
+      data: {
+        manager: {
+          name: currentUser.name,
+          email: currentUser.email,
+          designation: currentUser.designation,
+          role: currentUser.role
+        },
+        directReports: reportsWithStats,
+        totalDirectReports: reportsWithStats.length
+      }
+    });
+  } catch (error) {
+    console.error('Get team hierarchy error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching team hierarchy',
       error: error.message
     });
   }

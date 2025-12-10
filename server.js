@@ -36,6 +36,9 @@ app.use('/api/projects', require('./routes/projects'));
 // Meetings routes
 app.use('/api/meetings', require('./routes/meetings'));
 
+// Reports routes
+app.use('/api/reports', require('./routes/reports'));
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
