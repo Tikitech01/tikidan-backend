@@ -583,4 +583,37 @@ router.get('/employee-meetings/:employeeId', async (req, res) => {
   }
 });
 
+// GET all meetings with GPS data (for map display)
+router.get('/map/all-meetings', async (req, res) => {
+  try {
+    const meetings = await Meeting.find()
+      .populate('client', '_id clientName')
+      .populate('location', '_id name address city state')
+      .populate('createdBy', '_id name email designation')
+      .sort({ date: -1 });
+
+    console.log(`Total meetings found: ${meetings.length}`);
+    console.log('Meetings data:', JSON.stringify(meetings.map(m => ({
+      _id: m._id,
+      title: m.title,
+      location: m.location,
+      hasLocation: !!m.location
+    })), null, 2));
+
+    res.json({
+      success: true,
+      data: meetings,
+      totalMeetings: meetings.length,
+      meetingsWithLocations: meetings.filter(m => m.location && m.location._id).length
+    });
+  } catch (error) {
+    console.error('Error fetching meetings with GPS:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch meetings with GPS data',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
