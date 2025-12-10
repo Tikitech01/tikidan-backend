@@ -3,6 +3,7 @@ const router = express.Router();
 const Meeting = require('../models/Meeting');
 const Client = require('../models/Client');
 const Project = require('../models/Project');
+const LocationTracking = require('../models/LocationTracking');
 const { verifyToken } = require('../middleware/auth');
 
 // Middleware to check authentication
@@ -666,6 +667,175 @@ router.get('/employee/:id/details', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch employee details',
+      error: error.message
+    });
+  }
+});
+
+// GET employee movement tracking - GPS locations tracked every 5 minutes
+router.get('/employee/:id/movement', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date } = req.query;
+
+    // Build date filter
+    let dateFilter = {};
+    if (date) {
+      const selectedDate = new Date(date);
+      selectedDate.setHours(0, 0, 0, 0);
+      const nextDate = new Date(selectedDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+
+      dateFilter = {
+        date: { $gte: selectedDate, $lt: nextDate }
+      };
+    } else {
+      // Default to today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      dateFilter = {
+        date: { $gte: today, $lt: tomorrow }
+      };
+    }
+
+    // Fetch location tracking data for the employee
+    const locationData = await LocationTracking.find({
+      employee: id,
+      ...dateFilter
+    })
+      .sort({ timestamp: 1 })
+      .lean();
+
+    if (!locationData || locationData.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          locations: [],
+          totalPoints: 0,
+          date: date || new Date().toISOString().split('T')[0]
+        }
+      });
+    }
+
+    // Calculate distance and time between points
+    const processedLocations = locationData.map((loc, idx) => {
+      let distance = 0;
+      let timeDiff = 0;
+
+      if (idx > 0) {
+        const prev = locationData[idx - 1];
+        const R = 6371; // Earth's radius in km
+
+        const lat1 = (prev.latitude * Math.PI) / 180;
+        const lat2 = (loc.latitude * Math.PI) / 180;
+        const deltaLat = ((loc.latitude - prev.latitude) * Math.PI) / 180;
+        const deltaLon = ((loc.longitude - prev.longitude) * Math.PI) / 180;
+
+        const a =
+          Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+          Math.cos(lat1) *
+            Math.cos(lat2) *
+            Math.sin(deltaLon / 2) *
+            Math.sin(deltaLon / 2);
+
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        distance = R * c; // Distance in km
+
+        timeDiff = (loc.timestamp - prev.timestamp) / (1000 * 60); // Time in minutes
+      }
+
+      return {
+        _id: loc._id,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        accuracy: loc.accuracy,
+        timestamp: loc.timestamp,
+        distanceFromPrevious: distance, // km
+        timeFromPrevious: timeDiff // minutes
+      };
+    });
+
+    // Calculate total distance and time
+    const totalDistance = processedLocations.reduce((sum, loc) => sum + (loc.distanceFromPrevious || 0), 0);
+    const totalTime = locationData.length > 0 
+      ? (locationData[locationData.length - 1].timestamp - locationData[0].timestamp) / (1000 * 60)
+      : 0;
+
+    res.json({
+      success: true,
+      data: {
+        locations: processedLocations,
+        totalPoints: processedLocations.length,
+        totalDistance: totalDistance.toFixed(2), // km
+        totalTime: Math.round(totalTime), // minutes
+        date: date || new Date().toISOString().split('T')[0]
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching movement tracking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch movement tracking data',
+      error: error.message
+    });
+  }
+});
+
+// GET employee live location - Latest known location
+router.get('/employee/:id/live-location', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch the latest location for the employee
+    const latestLocation = await LocationTracking.findOne({ employee: id })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    if (!latestLocation) {
+      return res.json({
+        success: true,
+        data: {
+          location: null,
+          status: 'no_data',
+          message: 'No location data available'
+        }
+      });
+    }
+
+    // Calculate time since last update
+    const now = new Date();
+    const timeSinceUpdate = (now.getTime() - new Date(latestLocation.timestamp).getTime()) / (1000 * 60); // minutes
+
+    // Determine status based on time elapsed
+    let status = 'online';
+    if (timeSinceUpdate > 15) {
+      status = 'offline'; // Offline if no update in 15 minutes
+    } else if (timeSinceUpdate > 5) {
+      status = 'idle'; // Idle if no update in 5 minutes
+    }
+
+    res.json({
+      success: true,
+      data: {
+        location: {
+          latitude: latestLocation.latitude,
+          longitude: latestLocation.longitude,
+          accuracy: latestLocation.accuracy,
+          timestamp: latestLocation.timestamp
+        },
+        status: status,
+        timeSinceUpdate: Math.round(timeSinceUpdate),
+        statusMessage: status === 'online' ? 'Active' : status === 'idle' ? 'Idle' : 'Offline'
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching live location:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch live location',
       error: error.message
     });
   }

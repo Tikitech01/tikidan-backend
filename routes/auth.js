@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const LocationTracking = require('../models/LocationTracking');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { roles, getRoleDisplayName, getRoleMenuAccess } = require('../config/roles');
 
@@ -192,7 +193,7 @@ router.post('/register-employee', async (req, res) => {
 // @access  Public
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, latitude, longitude, accuracy } = req.body;
 
     // Validation
     if (!email || !password) {
@@ -226,6 +227,30 @@ router.post('/login', async (req, res) => {
         success: false,
         message: 'Account suspended by admin. Please contact your administrator.'
       });
+    }
+
+    // Capture location if provided during login
+    if (latitude && longitude) {
+      try {
+        const now = new Date();
+        const today = new Date(now);
+        today.setHours(0, 0, 0, 0);
+
+        // Save location tracking data
+        await LocationTracking.create({
+          employee: user._id,
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
+          accuracy: accuracy ? parseFloat(accuracy) : 0,
+          timestamp: now,
+          date: today
+        });
+        
+        console.log(`📍 Location captured for ${user.name}: ${latitude}, ${longitude}`);
+      } catch (locError) {
+        console.error('Error saving location:', locError);
+        // Don't fail login if location capture fails
+      }
     }
 
     // Get user permissions (custom or role-based)
