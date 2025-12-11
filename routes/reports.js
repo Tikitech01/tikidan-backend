@@ -873,18 +873,26 @@ router.get('/employee/:id/location-history', async (req, res) => {
     // Find the latest location
     const latestLocation = locations[0];
     
-    // Find all logout locations (red markers)
-    const offlineMarkers = locations.filter(loc => loc.eventType === 'logout');
+    // Find all logout locations (red markers) - including the latest one if it's a logout
+    let offlineMarkers = locations.filter(loc => loc.eventType === 'logout');
     
     // Determine status based on latest event type
     let status = 'offline';
     let onlineMarker = null;
     
-    if (latestLocation.eventType === 'logout') {
+    // Check the event type - if undefined, treat as 'tracking' (online)
+    const eventType = latestLocation.eventType || 'tracking';
+    
+    if (eventType === 'logout') {
       // Latest event is logout - employee is offline
       status = 'offline';
-      onlineMarker = null; // Don't show online marker if logged out
-    } else if (latestLocation.eventType === 'login' || latestLocation.eventType === 'tracking') {
+      onlineMarker = null;
+      
+      // Make sure the latest logout is in the offlineMarkers array
+      if (!offlineMarkers.some(loc => loc._id.equals(latestLocation._id))) {
+        offlineMarkers = [latestLocation, ...offlineMarkers];
+      }
+    } else if (eventType === 'login' || eventType === 'tracking') {
       // Latest event is login or tracking - employee is online
       status = 'online';
       onlineMarker = {
@@ -900,14 +908,22 @@ router.get('/employee/:id/location-history', async (req, res) => {
       success: true,
       data: {
         locations: locations,
+        status: status,
         onlineMarker: onlineMarker,
         offlineMarkers: offlineMarkers.map(loc => ({
           latitude: loc.latitude,
           longitude: loc.longitude,
           accuracy: loc.accuracy,
           timestamp: loc.timestamp,
-          type: 'offline'
-        }))
+          type: 'offline',
+          eventType: loc.eventType
+        })),
+        debug: {
+          latestEventType: latestLocation.eventType || 'undefined',
+          latestTimestamp: latestLocation.timestamp,
+          offlineMarkersCount: offlineMarkers.length,
+          isLatestLogout: eventType === 'logout'
+        }
       }
     });
   } catch (error) {
@@ -944,7 +960,7 @@ router.post('/log-location', async (req, res) => {
       eventType: 'tracking'
     });
 
-    console.log(`📍 Location logged for employee ${employeeId}: ${latitude}, ${longitude}`);
+    console.log(`📍 Location logged for employee ${employeeId}: ${latitude}, ${longitude} | EventType: ${newLocation.eventType}`);
 
     res.status(201).json({
       success: true,

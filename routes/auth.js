@@ -237,7 +237,7 @@ router.post('/login', async (req, res) => {
         today.setHours(0, 0, 0, 0);
 
         // Save location tracking data
-        await LocationTracking.create({
+        const savedLocation = await LocationTracking.create({
           employee: user._id,
           latitude: parseFloat(latitude),
           longitude: parseFloat(longitude),
@@ -247,7 +247,7 @@ router.post('/login', async (req, res) => {
           eventType: 'login'
         });
         
-        console.log(`🟢 Login location captured for ${user.name}: ${latitude}, ${longitude}`);
+        console.log(`🟢 Login location captured for ${user.name}: ${latitude}, ${longitude} | EventType: ${savedLocation.eventType}`);
       } catch (locError) {
         console.error('Error saving location:', locError);
         // Don't fail login if location capture fails
@@ -843,7 +843,7 @@ router.post('/logout', verifyToken, async (req, res) => {
 
     // If location data provided, log the logout location
     if (latitude && longitude) {
-      await LocationTracking.create({
+      const logoutLoc = await LocationTracking.create({
         employee: userId,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
@@ -853,7 +853,7 @@ router.post('/logout', verifyToken, async (req, res) => {
         eventType: 'logout' // Mark this as a logout event
       });
       
-      console.log(`🔴 Logout recorded for user ${userId}: ${latitude}, ${longitude}`);
+      console.log(`🔴 Logout recorded for user ${userId}: ${latitude}, ${longitude} | EventType: ${logoutLoc.eventType}`);
     }
 
     res.json({
