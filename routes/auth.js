@@ -311,6 +311,8 @@ router.get('/me', verifyToken, async (req, res) => {
         email: user.email,
         role: user.role,
         department: user.department,
+        designation: user.designation,
+        mobile: user.mobile,
         permissions: userPermissions,
         displayName: getRoleDisplayName(user.role)
       }

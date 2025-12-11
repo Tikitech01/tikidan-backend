@@ -655,6 +655,8 @@ router.get('/employee/:id/details', async (req, res) => {
   try {
     const { id } = req.params;
 
+    console.log(`📊 Fetching employee details for ID: ${id}`);
+
     // Fetch employee info from User model (to get name and designation)
     const User = require('../models/User');
     const employee = await User.findById(id).select('name designation role');
@@ -668,6 +670,7 @@ router.get('/employee/:id/details', async (req, res) => {
 
     // Get total clients created by this employee
     const totalClients = await Client.countDocuments({ createdBy: id });
+    console.log(`👥 Total clients for ${employee.name}: ${totalClients}`);
 
     // Get all meetings where this employee is the createdBy/assigned user
     const meetings = await Meeting.find({ createdBy: id })
@@ -676,6 +679,10 @@ router.get('/employee/:id/details', async (req, res) => {
       .lean();
 
     const totalMeetings = meetings.length;
+    console.log(`📅 Total meetings for ${employee.name}: ${totalMeetings}`);
+    if (meetings.length > 0) {
+      console.log(`   Meeting titles: ${meetings.map(m => m.title).join(', ')}`);
+    }
 
     res.json({
       success: true,
