@@ -786,6 +786,7 @@ router.get('/employee/:id/movement', async (req, res) => {
         longitude: loc.longitude,
         accuracy: loc.accuracy,
         timestamp: loc.timestamp,
+        eventType: loc.eventType || 'tracking', // Include event type (login, logout, tracking)
         distanceFromPrevious: distance, // km
         timeFromPrevious: timeDiff // minutes
       };
