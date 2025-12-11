@@ -243,10 +243,11 @@ router.post('/login', async (req, res) => {
           longitude: parseFloat(longitude),
           accuracy: accuracy ? parseFloat(accuracy) : 0,
           timestamp: now,
-          date: today
+          date: today,
+          eventType: 'login'
         });
         
-        console.log(`📍 Location captured for ${user.name}: ${latitude}, ${longitude}`);
+        console.log(`🟢 Login location captured for ${user.name}: ${latitude}, ${longitude}`);
       } catch (locError) {
         console.error('Error saving location:', locError);
         // Don't fail login if location capture fails
@@ -832,4 +833,42 @@ router.get('/available-permissions', verifyToken, requireRole(['admin']), async 
   }
 });
 
+// @route   POST /api/auth/logout
+// @desc    Log user logout with location
+// @access  Private
+router.post('/logout', verifyToken, async (req, res) => {
+  try {
+    const { latitude, longitude, accuracy } = req.body;
+    const userId = req.user.id;
+
+    // If location data provided, log the logout location
+    if (latitude && longitude) {
+      await LocationTracking.create({
+        employee: userId,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        accuracy: parseFloat(accuracy) || 0,
+        timestamp: new Date(),
+        date: new Date().toISOString().split('T')[0],
+        eventType: 'logout' // Mark this as a logout event
+      });
+      
+      console.log(`🔴 Logout recorded for user ${userId}: ${latitude}, ${longitude}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during logout',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
+

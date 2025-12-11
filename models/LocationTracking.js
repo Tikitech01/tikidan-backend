@@ -31,6 +31,11 @@ const locationTrackingSchema = new mongoose.Schema({
       return d;
     },
     index: true
+  },
+  eventType: {
+    type: String,
+    enum: ['login', 'logout', 'tracking'],
+    default: 'tracking'
   }
 });
 

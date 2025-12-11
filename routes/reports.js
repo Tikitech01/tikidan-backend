@@ -841,4 +841,130 @@ router.get('/employee/:id/live-location', async (req, res) => {
   }
 });
 
+// GET employee location history with login/logout markers
+router.get('/employee/:id/location-history', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { days = 7 } = req.query;
+
+    // Get locations from last N days
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+    
+    const locations = await LocationTracking.find({
+      employee: id,
+      timestamp: { $gte: startDate }
+    })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    if (!locations || locations.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          locations: [],
+          onlineMarker: null,
+          offlineMarkers: [],
+          status: 'offline'
+        }
+      });
+    }
+
+    // Find the latest location
+    const latestLocation = locations[0];
+    
+    // Find all logout locations (red markers)
+    const offlineMarkers = locations.filter(loc => loc.eventType === 'logout');
+    
+    // Determine status based on latest event type
+    let status = 'offline';
+    let onlineMarker = null;
+    
+    if (latestLocation.eventType === 'logout') {
+      // Latest event is logout - employee is offline
+      status = 'offline';
+      onlineMarker = null; // Don't show online marker if logged out
+    } else if (latestLocation.eventType === 'login' || latestLocation.eventType === 'tracking') {
+      // Latest event is login or tracking - employee is online
+      status = 'online';
+      onlineMarker = {
+        latitude: latestLocation.latitude,
+        longitude: latestLocation.longitude,
+        accuracy: latestLocation.accuracy,
+        timestamp: latestLocation.timestamp,
+        type: 'online'
+      };
+    }
+
+    res.json({
+      success: true,
+      data: {
+        locations: locations,
+        onlineMarker: onlineMarker,
+        offlineMarkers: offlineMarkers.map(loc => ({
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          accuracy: loc.accuracy,
+          timestamp: loc.timestamp,
+          type: 'offline'
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching location history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch location history',
+      error: error.message
+    });
+  }
+});
+
+// POST endpoint to log location (called every 5 minutes from frontend)
+router.post('/log-location', async (req, res) => {
+  try {
+    const { latitude, longitude, accuracy } = req.body;
+    const employeeId = req.user.id; // From JWT token
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and longitude are required'
+      });
+    }
+
+    // Create new location record
+    const newLocation = await LocationTracking.create({
+      employee: employeeId,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      accuracy: parseFloat(accuracy) || 0,
+      timestamp: new Date(),
+      date: new Date().toISOString().split('T')[0],
+      eventType: 'tracking'
+    });
+
+    console.log(`📍 Location logged for employee ${employeeId}: ${latitude}, ${longitude}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Location logged successfully',
+      data: {
+        latitude: newLocation.latitude,
+        longitude: newLocation.longitude,
+        accuracy: newLocation.accuracy,
+        timestamp: newLocation.timestamp
+      }
+    });
+  } catch (error) {
+    console.error('Error logging location:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to log location',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
+
