@@ -34,6 +34,14 @@ const branchLocationSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
     required: true
+  },
+  latitude: {
+    type: Number,
+    sparse: true
+  },
+  longitude: {
+    type: Number,
+    sparse: true
   }
 }, {
   timestamps: true

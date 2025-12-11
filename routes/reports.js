@@ -589,23 +589,56 @@ router.get('/map/all-meetings', async (req, res) => {
   try {
     const meetings = await Meeting.find()
       .populate('client', '_id clientName')
-      .populate('location', '_id name address city state')
+      .populate('location', '_id name address city state latitude longitude')
       .populate('createdBy', '_id name email designation')
       .sort({ date: -1 });
 
-    console.log(`Total meetings found: ${meetings.length}`);
-    console.log('Meetings data:', JSON.stringify(meetings.map(m => ({
-      _id: m._id,
-      title: m.title,
-      location: m.location,
-      hasLocation: !!m.location
-    })), null, 2));
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`📍 MEETING LOCATIONS REPORT - ${new Date().toISOString()}`);
+    console.log(`${'='.repeat(80)}`);
+    console.log(`Total meetings found: ${meetings.length}\n`);
+    
+    // Log detailed info about each meeting
+    meetings.forEach((m, i) => {
+      console.log(`${i+1}. Meeting: "${m.title}"`);
+      console.log(`   Date: ${m.date}, Time: ${m.time}`);
+      
+      if (m.location) {
+        console.log(`   Location ID: ${m.location._id}`);
+        console.log(`   Location Name: ${m.location.name}`);
+        console.log(`   Location City: ${m.location.city}`);
+        console.log(`   Location Address: ${m.location.address}`);
+        console.log(`   Location Coords: Lat=${m.location.latitude}, Lng=${m.location.longitude}`);
+      } else {
+        console.log(`   Location: NOT SET`);
+      }
+      
+      if (m.gpsCoordinates) {
+        console.log(`   GPS Coords: Lat=${m.gpsCoordinates.latitude}, Lng=${m.gpsCoordinates.longitude}`);
+      } else {
+        console.log(`   GPS Coords: NOT SET`);
+      }
+      console.log('');
+    });
+
+    const withLocations = meetings.filter(m => m.location && m.location._id).length;
+    const withCoords = meetings.filter(m => {
+      const hasLoc = m.location && (m.location.latitude || m.location.longitude);
+      const hasGps = m.gpsCoordinates && (m.gpsCoordinates.latitude || m.gpsCoordinates.longitude);
+      return hasLoc || hasGps;
+    }).length;
+    
+    console.log(`SUMMARY:`);
+    console.log(`📊 Meetings with location reference: ${withLocations}`);
+    console.log(`🗺️  Meetings with actual coordinates: ${withCoords}`);
+    console.log(`${'='.repeat(80)}\n`);
 
     res.json({
       success: true,
       data: meetings,
       totalMeetings: meetings.length,
-      meetingsWithLocations: meetings.filter(m => m.location && m.location._id).length
+      meetingsWithLocations: withLocations,
+      meetingsWithCoordinates: withCoords
     });
   } catch (error) {
     console.error('Error fetching meetings with GPS:', error);
@@ -639,7 +672,7 @@ router.get('/employee/:id/details', async (req, res) => {
     // Get all meetings where this employee is the createdBy/assigned user
     const meetings = await Meeting.find({ createdBy: id })
       .populate('client', 'clientName')
-      .populate('location', 'name address city')
+      .populate('location', 'name address city latitude longitude')
       .lean();
 
     const totalMeetings = meetings.length;
